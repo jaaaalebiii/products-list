@@ -16,6 +16,12 @@ app.use(express.static(path.resolve(__dirname, "..")));
 
 app.use("/products", productsRouter);
 
+app.get("/", (req, res) => {
+  res.json({
+    message: "Products API is running",
+    endpoint: "/products",
+  });
+});
 
 app.get("/health", async (req, res) => {
   try {
