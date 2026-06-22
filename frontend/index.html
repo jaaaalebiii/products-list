@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Browser</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Backend assignment frontend</p>
+        <h1>Product Browser</h1>
+        <p class="hero-copy">
+          Browse products with cursor pagination, category filtering, and a
+          lightweight interface that stays out of the way.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="toolbar">
+          <label class="field">
+            <span>Category</span>
+            <select id="categorySelect">
+              <option value="">All categories</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Clothing">Clothing</option>
+              <option value="Books">Books</option>
+              <option value="Home & Kitchen">Home & Kitchen</option>
+              <option value="Sports">Sports</option>
+              <option value="Toys">Toys</option>
+              <option value="Beauty">Beauty</option>
+              <option value="Automotive">Automotive</option>
+              <option value="Grocery">Grocery</option>
+              <option value="Office Supplies">Office Supplies</option>
+            </select>
+          </label>
+
+          <div class="status">
+            <span id="resultCount">0 products</span>
+            <span id="pageNumber">Page 1</span>
+            <span id="pageHint">Ready to load</span>
+          </div>
+        </div>
+
+        <div id="loadingState" class="loading" hidden>Loading products...</div>
+        <div id="errorState" class="error" hidden></div>
+
+        <div id="productGrid" class="grid"></div>
+
+        <div class="actions">
+          <button id="prevButton" class="button button--secondary" type="button">
+            Previous
+          </button>
+          <button id="nextButton" class="button" type="button">Next page</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
