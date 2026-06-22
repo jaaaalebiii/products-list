@@ -1,69 +1,102 @@
-# Product Browser API
+# Products List
 
-Backend take-home assignment for CodeVector.
+A scalable product browsing application built for the CodeVector Backend Take-Home Assignment.
 
-## Overview
+## Live Demo
 
-This project implements a product browsing API over a dataset of 200,000 products.
+**Frontend:** https://products-list-lyart.vercel.app/
 
-Features:
+**Backend API:** https://products-list-5zgd.onrender.com/
 
-- Cursor-based pagination
-- Category filtering
-- PostgreSQL database
-- Efficient indexing
-- Seed script for generating 200,000 products
-- Optional frontend for browsing products
+**GitHub Repository:** https://github.com/jaaaalebiii/products-list
 
-The API returns products ordered by:
+---
+
+## Project Overview
+
+This project implements a product catalog system containing **200,000 products** with support for:
+
+* Cursor-based pagination
+* Category filtering
+* PostgreSQL-backed storage
+* Efficient indexing
+* Bulk data generation and seeding
+* Responsive frontend for browsing products
+
+Products are always returned in descending order of recency:
 
 ```sql
 ORDER BY updated_at DESC, id DESC
 ```
 
-so the newest products appear first.
+This ensures newer products appear first while maintaining deterministic ordering.
+
+---
+
+## Architecture
+
+```text
+Frontend (HTML/CSS/JavaScript)
+            │
+            ▼
+     Express.js API
+            │
+            ▼
+ PostgreSQL (Neon)
+```
+
+### Hosting
+
+* Frontend: Vercel
+* Backend: Render
+* Database: Neon PostgreSQL
 
 ---
 
 ## Tech Stack
 
-Backend:
-- Node.js
-- Express.js
-- PostgreSQL (Neon)
-- pg
+### Backend
 
-Frontend:
-- HTML
-- CSS
-- Vanilla JavaScript
+* Node.js
+* Express.js
+* PostgreSQL
+* pg
+* dotenv
 
-Hosting:
-- Render
-- Neon
+### Frontend
+
+* HTML
+* CSS
+* Vanilla JavaScript
+
+### Infrastructure
+
+* Render
+* Neon
+* Vercel
 
 ---
 
 ## Database Schema
 
-Products table:
+### products
 
-| Column | Type |
-|----------|----------|
-| id | SERIAL PRIMARY KEY |
-| name | TEXT |
-| category | TEXT |
-| price | NUMERIC |
-| created_at | TIMESTAMP |
-| updated_at | TIMESTAMP |
+| Column     | Type               |
+| ---------- | ------------------ |
+| id         | SERIAL PRIMARY KEY |
+| name       | TEXT               |
+| category   | TEXT               |
+| price      | NUMERIC            |
+| created_at | TIMESTAMP          |
+| updated_at | TIMESTAMP          |
 
 ---
 
 ## Why Cursor Pagination?
 
-Offset pagination becomes slower as offsets grow because PostgreSQL must scan and discard rows before returning results.
+The assignment required pagination that remains correct while data is changing.
 
-Example:
+Traditional offset pagination:
 
 ```sql
 SELECT *
@@ -73,7 +106,12 @@ OFFSET 100000
 LIMIT 20;
 ```
 
-Cursor pagination avoids this problem by using the last seen row as a bookmark:
+has two drawbacks:
+
+1. Performance degrades as offsets grow.
+2. Inserts or updates between requests can cause duplicate or skipped records.
+
+Instead, this project uses cursor pagination:
 
 ```sql
 WHERE (updated_at, id) < ($1, $2)
@@ -81,16 +119,24 @@ ORDER BY updated_at DESC, id DESC
 LIMIT $3
 ```
 
-Benefits:
+The cursor consists of:
 
-- Consistent performance
-- No duplicate rows while browsing
-- No skipped rows while new products are added
-- Index-friendly
+* updated_at
+* id
+
+Using both fields guarantees stable ordering even when multiple products share the same timestamp.
+
+### Benefits
+
+* Consistent query performance
+* Index-friendly
+* No duplicate records while browsing
+* No skipped records when new products are inserted
+* Deterministic ordering
 
 ---
 
-## Indexes
+## Indexing Strategy
 
 Primary pagination index:
 
@@ -99,14 +145,14 @@ CREATE INDEX idx_products_updated_id
 ON products(updated_at DESC, id DESC);
 ```
 
-Category filter index:
+Category filtering index:
 
 ```sql
 CREATE INDEX idx_products_category_updated_id
 ON products(category, updated_at DESC, id DESC);
 ```
 
-These indexes support both sorting and filtering efficiently.
+These indexes allow PostgreSQL to efficiently support both pagination and filtered queries.
 
 ---
 
@@ -118,22 +164,22 @@ These indexes support both sorting and filtering efficiently.
 GET /products
 ```
 
-Query parameters:
+### Query Parameters
 
-| Parameter | Description |
-|------------|------------|
-| limit | Number of products to return |
-| category | Optional category filter |
-| cursorUpdatedAt | Cursor timestamp |
-| cursorId | Cursor id |
+| Parameter       | Description                  |
+| --------------- | ---------------------------- |
+| limit           | Number of products to return |
+| category        | Optional category filter     |
+| cursorUpdatedAt | Cursor timestamp             |
+| cursorId        | Cursor identifier            |
 
-Example:
+### Example
 
 ```http
 GET /products?limit=20&category=Electronics
 ```
 
-Response:
+### Example Response
 
 ```json
 {
@@ -151,47 +197,60 @@ Response:
 
 ---
 
-## Seeding
+## Data Generation & Seeding
 
-Generate products:
+A custom seed script generates **200,000 products** with:
+
+* Random names
+* Random categories
+* Random prices
+* Random creation timestamps
+* Random update timestamps
+
+To improve insertion performance:
+
+* Products are generated in memory
+* Inserts are batched
+* Bulk inserts are used instead of row-by-row operations
+* Transactions ensure consistency
+
+Run:
 
 ```bash
 node scripts/seed.js
 ```
 
-The seed script creates 200,000 products with:
-
-- Random names
-- Random categories
-- Random prices
-- Random created_at timestamps
-- Random updated_at timestamps
-
-Products are inserted in batches for performance.
-
 ---
 
 ## Running Locally
 
-Install dependencies:
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
-Create:
+### Configure Environment Variables
+
+Create a `.env` file:
 
 ```env
 DATABASE_URL=your_neon_connection_string
 ```
 
-Run:
+### Start Development Server
 
 ```bash
 npm run dev
 ```
 
-Server:
+### Production
+
+```bash
+npm start
+```
+
+Server runs on:
 
 ```text
 http://localhost:3000
@@ -201,40 +260,48 @@ http://localhost:3000
 
 ## Testing
 
-The API was tested for:
+The implementation was tested for:
 
-- Cursor pagination
-- Category filtering
-- Invalid query parameters
-- Pagination consistency during data changes
+* Pagination correctness
+* Category filtering
+* Invalid query parameters
+* Cursor validation
+* Large dataset performance
+* Data consistency while browsing
 
-To test consistency:
+### Consistency Test
 
-1. Request page 1
-2. Insert a new product with a newer timestamp
-3. Request page 2 using the previous cursor
-4. Verify no duplicate products appear
+1. Request Page 1
+2. Insert a newer product
+3. Request Page 2 using the original cursor
+4. Verify that no duplicate records appear
+5. Verify that no products are skipped
+
+This validates the primary requirement of the assignment.
 
 ---
 
 ## Future Improvements
 
-With more time I would add:
+Given additional time, I would add:
 
-- Automated tests
-- API documentation (Swagger/OpenAPI)
-- Docker support
-- Full-text product search
-- Better monitoring and logging
+* Automated integration tests
+* OpenAPI / Swagger documentation
+* Docker support
+* Full-text product search
+* Request logging and monitoring
+* Rate limiting
+* CI/CD workflows
 
 ---
 
 ## AI Usage
 
-AI tools were used to:
+AI tools (Claude and ChatGPT) were used to:
 
-- Discuss pagination strategies
-- Review code structure
-- Explain PostgreSQL concepts
+* Discuss pagination approaches
+* Review architecture decisions
+* Explain PostgreSQL indexing concepts
+* Validate implementation choices
 
-All code was reviewed, tested, and modified manually.
+All generated code was reviewed, modified, tested, and debugged manually. The final implementation, deployment, testing, and architectural decisions were verified independently.
